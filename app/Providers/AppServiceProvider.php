@@ -20,14 +20,16 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191); //Solved by increasing StringLength
 
 //        \View::share(['channels' => \App\Channel::all()]);
-        \View::composer('*', function ($view) {
-
-            $channels = Cache::rememberForever('channels', function () {
-                return \App\Channel::all();
-            });
-
-            $view->with(['channels' => $channels]);
-        });
+//        \View::composer('*', function ($view) {
+//
+////            $channels = Cache::rememberForever('channels', function () {
+////                return \App\Channel::all();
+////            });
+//
+//            $view->with(['channels' => \App\Channel::all()]);
+//
+//
+//        });
 
     }
 

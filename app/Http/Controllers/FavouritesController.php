@@ -18,7 +18,14 @@ class FavouritesController extends Controller
 
     public function store(Reply $reply)
     {
+//        return $reply;
         $reply->favourite(auth()->id());
-        return back();
+//        return back();
     }
+
+    public function destroy(Reply $reply)
+    {
+        $reply->unfavourite();
+    }
+
 }

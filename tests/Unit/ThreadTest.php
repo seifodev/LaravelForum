@@ -57,7 +57,11 @@ class ThreadTest extends TestCase
     public function a_thread_can_add_new_reply()
     {
         $reply = factory('App\Reply')->make(['thread_id' => $this->thread->id]);
-        $this->thread->addReply($reply->toArray());
+        $this->thread->addReply([
+            'thread_id' => $reply->thread_id,
+            'user_id'   => $reply->user_id,
+            'body'      => $reply->body,
+        ]);
 
         $this->assertDatabaseHas('replies', ['body' => $reply->body]);
     }
@@ -69,5 +73,64 @@ class ThreadTest extends TestCase
     public function a_thread_belongs_to_a_channel()
     {
         $this->assertInstanceOf('App\Channel', $this->thread->channel);
+    }
+
+    /**
+     * @test
+     */
+    public function a_thread_can_be_subscribed_to()
+    {
+        $thread = create('App\Thread');
+        $this->actingAs(create('App\User'));
+        $thread->subscribe();
+
+        $this->assertEquals(1, $thread->subscriptions()->where('user_id', auth()->id())->count());
+    }
+
+    /**
+     * @test
+     */
+    public function a_thread_can_be_unsubscribed_from()
+    {
+        $thread = create('App\Thread');
+        $thread->subscribe($userId = 1);
+        $this->assertEquals(1, $thread->subscriptions()->where('user_id', 1)->count());
+
+        $thread->unsubscribe($userId);
+        $this->assertEquals(0, $thread->subscriptions()->where('user_id', 1)->count());
+
+    }
+
+    /**
+     * @test
+     */
+    public function a_thread_may_knows_if_it_is_subscribed_to()
+    {
+        $this->signIn();
+        $thread = create('App\Thread');
+
+        $this->assertFalse($thread->isSubscribedTo);
+
+        $thread->subscribe();
+
+        $this->assertTrue($thread->isSubscribedTo);
+    }
+
+    /**
+     * @test
+     */
+    public function a_thread_can_check_if_the_authenticated_user_has_read_all_replies()
+    {
+        $this->signIn();
+
+        $thread = create('App\Thread')->subscribe();
+
+        $this->assertTrue($thread->hasUpdatesFor());
+
+        auth()->user()->read($thread);
+
+        $this->assertFalse($thread->hasUpdatesFor());
+
+
     }
 }

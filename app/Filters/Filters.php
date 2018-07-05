@@ -6,9 +6,12 @@ use Illuminate\Http\Request;
 
 Abstract class Filters
 {
-    protected $request,
-              $builder,
-              $filters = [];
+    protected $request;
+    /**
+     * @var \Illuminate\Database\Eloquent\Builder
+     */
+    protected $builder;
+    protected $filters = [];
 
     /**
      * Filters constructor.
@@ -52,6 +55,7 @@ Abstract class Filters
         return $this->builder;
 
     }
+
 
     public function getFilters()
     {

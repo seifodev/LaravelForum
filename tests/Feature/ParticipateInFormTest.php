@@ -43,10 +43,12 @@ class ParticipateInFormTest extends TestCase
         $this
             ->actingAs($user)
             ->post($thread->path() . '/replies', $reply->toArray())
-            ->assertStatus(302);
+            ->assertStatus(200);
 
-        $this->get($thread->path())
-            ->assertSee($reply->body);
+        $this
+            ->assertDatabaseHas('replies', ['body' => $reply->body]);
+
+        $this->assertEquals(1, $thread->fresh()->replies_count);
 
     }
 
@@ -61,7 +63,128 @@ class ParticipateInFormTest extends TestCase
         $this
             ->signIn()
             ->post($thread->path() . '/replies', $reply->toArray())
-            ->assertSessionHasErrors('body');
+            ->assertStatus(442);
+
+    }
+
+    /**
+     * @test
+     */
+    public function unauthorized_user_can_not_delete_a_reply()
+    {
+        $reply = create('App\Reply');
+
+        $this->delete("/replies/{$reply->id}")
+            ->assertStatus(302)
+            ->assertRedirect('/login');
+
+        $this->signIn();
+        $reply = create('App\Reply');
+
+        $this->delete("/replies/{$reply->id}")
+            ->assertStatus(403);
+
+    }
+
+    /**
+     * @test
+     */
+    public function an_authorized_user_can_delete_his_replies()
+    {
+
+        $this->signIn();
+        $reply = create('App\Reply', ['user_id' => auth()->id()]);
+
+        $response = $this->json('DELETE', "replies/{$reply->id}");
+
+        $response
+            ->assertStatus(302);
+
+        $this->assertDatabaseMissing('replies', ['body' => $reply->body]);
+
+        $this->assertEquals(0, $reply->thread->replies_count);
+
+    }
+
+    /**
+     * @test
+     */
+    public function unauthorized_user_can_not_update_a_reply()
+    {
+        $reply = create('App\Reply');
+
+        $this->patch("/replies/{$reply->id}")
+            ->assertStatus(302)
+            ->assertRedirect('/login');
+
+        $this->signIn();
+        $this->patch("/replies/{$reply->id}")
+            ->assertStatus(442);
+
+    }
+
+    /**
+     * @test
+     */
+    public function an_authorized_user_can_update_his_replies()
+    {
+
+        $this->signIn();
+        $reply = create('App\Reply', ['user_id' => auth()->id()]);
+
+        $newBody = 'Updated Body';
+        $response = $this->patch("replies/{$reply->id}", ['body' => $newBody]);
+
+        $response
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('replies', ['body' => $newBody]);
+
+    }
+
+    /**
+     * @test
+     */
+    public function replies_that_contains_spam_may_not_be_added()
+    {
+
+        $this->withoutExceptionHandling();
+
+        $this->signIn();
+        $thread = create(Thread::class);
+        $reply = make(Reply::class, [
+            'body'  => 'A spam reply test',
+        ]);
+
+//        $this->expectException(\Illuminate\Validation\ValidationException::class);
+
+        $this->post($thread->path() . '/replies', $reply->toArray())
+            ->assertStatus(442);
+
+    }
+
+    /**
+     * @test
+     */
+    public function users_may_only_reply_once_per_min()
+    {
+        $this->withoutExceptionHandling();
+
+        $this->signIn();
+        $thread = create(Thread::class);
+
+        $reply = make(Reply::class, [
+            'body'  => 'A simple reply',
+        ]);
+
+        $this->post($thread->path() . '/replies', $reply->toArray())
+            ->assertStatus(200);
+
+//        $this->expectException('\Illuminate\Auth\Access\AuthorizationException');
+
+        $this->post($thread->path() . '/replies', $reply->toArray())
+            ->assertStatus(442);
+
 
     }
 

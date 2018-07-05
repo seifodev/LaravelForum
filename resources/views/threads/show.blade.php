@@ -1,84 +1,58 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container">
 
-        <div class="row">
-            <div class="col-md-8">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <strong>
-                            {{ $thread->title }}
-                        </strong>
-                    </div>
+    <thread :initial-replies-count="{{$thread->replies_count}}" inline-template>
+        <div class="container">
 
-                    <div class="panel-body">
-                            {{ $thread->body }}
-                        <hr>
-                    </div>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="panel panel-default">
+                        <div class="panel-heading clearfix">
+                            @can('update', $thread)
+                            <div class="pull-right">
+                                {!! Form::open(['method' => 'DELETE', 'url' => $thread->path()]) !!}
+                                {!! Form::submit('delete thread', ['class' => 'btn btn-danger btn-sm']) !!}
+                                {!! Form::close() !!}
+                            </div>
+                            @endcan
+                            <strong>
+                                {{ $thread->title }}
+                            </strong>
+                        </div>
 
-                </div><!-- end .panel -->
+                        <div class="panel-body">
+                                {{ $thread->body }}
+                            <hr>
+                        </div>
 
-                <!-- Start Replies -->
-                @foreach($replies as $reply)
-                    @include('threads.reply')
-                @endforeach
-                <!-- End Replies -->
+                    </div><!-- end .panel -->
 
-
-
-                {{ $replies->links() }}
-
-                @include('threads.errors') <!-- Show Form Errors -->
-
-                <!-- Start Replying Form -->
-                @if(auth()->check())
-
-                    {!! Form::open([
-                        'method'    => 'POST',
-                        'url'       => "{$thread->path()}/replies"
-                    ]) !!}
-
-                    <div class="form-group">
-                        {!! Form::textarea('body', null, ['class' => 'form-control', 'rows' => 5, 'required', 'placeholder' => 'Have something to say?']) !!}
-                    </div>
-
-                    {!! Form::submit('Post', ['class' => 'btn btn-primary']) !!}
-
-                    {!! Form::close() !!}
-
-                @else
-                    <p>Please <a href="{{ route('login') }}">sign in</a> to participate in this discussion.</p>
-                @endif
-                <!-- End Replying Form -->
+                    <!-- Start Replies -->
+                    <replies @removed="repliesCount--" @added="repliesCount++"></replies>
+                    <!-- End Replies -->
 
 
-            </div><!-- end .col -->
+                    @include('threads.errors') <!-- Show Form Errors -->
 
-            <div class="col-md-4">
-                <div class="panel panel-default">
-                    <div class="panel-body">
-                        This thread was published {{ $thread->created_at->diffForHumans() }} ago, <br>
-                        by
-                        <a href="#">{{ $thread->creator->name }}</a>,
-                        & currently has {{ $thread->replies_count }} {{ str_plural('comment', $thread->replies_count) }}.
-                    </div>
-                </div><!-- end .panel -->
-            </div>
+                </div><!-- end .col -->
 
-        </div><!-- end .row -->
+                <div class="col-md-4">
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            This thread was published {{ $thread->created_at->diffForHumans() }} ago, <br>
+                            by
+                            <a href="{{ $thread->creator->profilePath() }}">{{ $thread->creator->name }}</a>,
+                            & currently has <span v-text="repliesCount"></span> {{ str_plural('comment', $thread->replies_count) }}.
+                            <subscribe active="{{$thread->is_subscribed_to}}"></subscribe>
+                        </div>
+                    </div><!-- end .panel -->
+                </div>
 
-
-
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-
-    </div><!-- end .container -->
+            </div><!-- end .row -->
 
 
-
+        </div><!-- end .container -->
+    </thread>
 
 @endsection

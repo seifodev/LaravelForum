@@ -53,15 +53,15 @@ class ReadThreadsTest extends TestCase
     /**
      * @test
      */
-    public function a_user_can_read_replies_belongs_to_a_thread()
+    public function a_user_can_request_all_replies_for_a_given_thread()
     {
+        $this->withoutExceptionHandling();
+        $thread = create('App\Thread');
+        $replies = create('App\Reply', ['thread_id' => $thread->id], 2);
 
-        $thread = create(Thread::class);
-        $reply = factory(Reply::class)->create(['thread_id' => $thread->id]);
-
-        $this->get($thread->path())
-            ->assertStatus(200)
-            ->assertSee($reply->body);
+        $response = $this->get($thread->path() . '/replies');
+        $this->assertCount(2, $response->json()['data']);
+        $this->assertEquals(2, $response->json()['total']);
 
     }
 
@@ -120,6 +120,23 @@ class ReadThreadsTest extends TestCase
         $response = $this->json('get', '/threads?popular=1');
 
         $this->assertEquals([3, 2, 0], array_column($response->json(), 'replies_count'));
+    }
+
+    /**
+     * @test
+     */
+    public function a_user_can_filter_threads_by_those_that_has_no_replies()
+    {
+        $this->withoutExceptionHandling();
+        $threadWithoutReplies = create('App\Thread');
+        $threadWithReplies = create('App\Thread');
+        create('App\Reply', ['thread_id' => $threadWithReplies->id]);
+
+        $response = $this->get('/threads/?unanswered=1');
+
+        $response
+            ->assertSee($threadWithoutReplies->title)
+            ->assertDontSee($threadWithReplies->title);
     }
 
 
